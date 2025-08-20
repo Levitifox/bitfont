@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     ops::{Index, IndexMut},
+    str::FromStr,
 };
 
 struct Bitmap {
@@ -35,15 +36,43 @@ impl IndexMut<(usize, usize)> for Bitmap {
 
 impl Debug for Bitmap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for y in 0..self.height {
+            for x in 0..self.width {
                 write!(f, "{}", if self[(x, y)] { "#" } else { "." })?;
             }
-            if x != self.width - 1 {
+            if y != self.height - 1 {
                 writeln!(f)?;
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ParseBitmapError;
+
+impl FromStr for Bitmap {
+    type Err = ParseBitmapError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lines = s.split("\n").collect::<Vec<_>>();
+        let height = if s.is_empty() { 0 } else { lines.len() };
+        let width = lines[0].chars().count();
+        let mut bitmap = Bitmap::new(width, height);
+        for (y, line) in lines.into_iter().enumerate() {
+            let chars = line.chars().collect::<Vec<_>>();
+            if chars.len() != width {
+                return Err(ParseBitmapError);
+            }
+            for (x, char) in chars.into_iter().enumerate() {
+                bitmap[(x, y)] = match char {
+                    '.' => false,
+                    '#' => true,
+                    _ => return Err(ParseBitmapError),
+                };
+            }
+        }
+        Ok(bitmap)
     }
 }
 
@@ -55,5 +84,11 @@ fn main() {
     dbg!(bitmap[(2, 4)]);
     bitmap[(2, 4)] = true;
     dbg!((bitmap, 123));
+    let s = "\
+...#...
+..#.#..
+.#####.
+#.....#";
+    dbg!(s.parse::<Bitmap>());
     println!("Hello, world!");
 }
